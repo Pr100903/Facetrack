@@ -1,0 +1,39 @@
+# Virtual Environment
+face_env/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+training/
+testing/
+*.jpg
+*.jpeg
+*.png
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
