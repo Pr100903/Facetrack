@@ -11,10 +11,10 @@ from pathlib import Path
 # ---------------- CONFIG ---------------- #
 DB_PATH = "training"
 MODEL_NAME = "ArcFace"   # Best backend for DeepFace
-THRESHOLD = 0.60         # Tune between 0.4 - 0.6
+THRESHOLD = 0.50         # Tune between 0.3 - 0.6 (Lower = stricter unknown detection)
 DEBUG = True             # Set True to print distance debug info
 USE_GPU = False  # GPU disabled for CPU-only environments
-DETECTION_SCALE = 0.5    # Reduce for faster detection (0 < scale <= 1)
+DETECTION_SCALE = 0.8    # Higher = better quality crops (0 < scale <= 1)
 # Fast-mode defaults (for higher FPS)
 FAST_DETECTION_SCALE = 0.35
 FAST_DETECTION_INTERVAL = 12
@@ -43,7 +43,7 @@ def load_database():
             embedding = DeepFace.represent(
                 img_path=path,
                 model_name=MODEL_NAME,
-                enforce_detection=False
+                enforce_detection=True  # Stricter database embeddings
             )[0]["embedding"]
 
             database[name] = embedding
@@ -111,7 +111,7 @@ def recognize_face(face_img):
         result = DeepFace.represent(
             img_path=face_img,
             model_name=MODEL_NAME,
-            enforce_detection=False
+            enforce_detection=True  # Stricter - reject low-quality detections
         )
         embedding = result[0]["embedding"]
     except Exception as e:
@@ -410,18 +410,23 @@ if args.eval:
     # Print timing metrics
     print("\n--- Performance Metrics ---")
     if detection_times:
-        avg_detection = np.mean(detection_times)
-        print(f"Detection Time : {avg_detection:.4f} sec")
+        det_arr = np.array(detection_times)
+        print(f"Detection Time - Avg: {np.mean(det_arr):.4f}s, Min: {np.min(det_arr):.4f}s, Max: {np.max(det_arr):.4f}s, StdDev: {np.std(det_arr):.4f}s")
     if embedding_times:
-        avg_embedding = np.mean(embedding_times)
-        print(f"Embedding Time : {avg_embedding:.4f} sec")
+        emb_arr = np.array(embedding_times)
+        print(f"Embedding Time - Avg: {np.mean(emb_arr):.4f}s, Min: {np.min(emb_arr):.4f}s, Max: {np.max(emb_arr):.4f}s, StdDev: {np.std(emb_arr):.4f}s")
     if matching_times:
-        avg_matching = np.mean(matching_times)
-        print(f"Matching Time : {avg_matching:.4f} sec")
+        match_arr = np.array(matching_times)
+        print(f"Matching Time  - Avg: {np.mean(match_arr):.4f}s, Min: {np.min(match_arr):.4f}s, Max: {np.max(match_arr):.4f}s, StdDev: {np.std(match_arr):.4f}s")
+    
+    # Per-frame latency (detection + embedding per image)
+    if detection_times and embedding_times and len(detection_times) == len(embedding_times):
+        per_frame_latency = np.array(detection_times) + np.array(embedding_times)
+        print(f"Per-Frame Latency - Avg: {np.mean(per_frame_latency):.4f}s, Min: {np.min(per_frame_latency):.4f}s, Max: {np.max(per_frame_latency):.4f}s")
     
     total_time = sum(detection_times) + sum(embedding_times)
     if total_time > 0:
-        print(f"Total Time : {total_time:.4f} sec")
+        print(f"Total Processing Time: {total_time:.4f} sec")
 
     # FPS stats for evaluation (per-image)
     if fps_samples:
